@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'darak303@naver.com' || 
+        request.auth.uid == 'aRCEGOfj0lgkOES0KLywQwbsjLX2' ||
+        request.auth.uid == '4PYWOqRk1dXhVt5NXe5DZq7Fa4Q2' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true)
+      );
+    }
+
+    function isOrgAdmin(orgId) {
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isGroupAdmin', false) == true &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('membershipIds', []).hasAny([orgId]))
+      );
+    }
+
+    // --- Collection Rules ---
+
+    // Chat Messages Rules
+    match /organizations/{orgId}/smallGroups/{groupId}/messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.senderId ||
+        isOrgAdmin(orgId) ||
+        isSuperAdmin()
+      );
+    }
+
+    // Organizations and Community Content
+    match /organizations/{orgId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin() || isOrgAdmin(orgId);
+
+      match /{allSubcollections=**} {
+        allow read: if isSignedIn();
+        allow write: if isSuperAdmin() || isOrgAdmin(orgId);
+      }
+    }
+
+    // Prayer Posts Rules
+    match /prayerPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isSuperAdmin() ||
+        isOrgAdmin(resource.data.organizationId) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['amens', 'visibility'])
+      );
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isSuperAdmin() || isOrgAdmin(resource.data.organizationId));
+    }
+
+    // Forum Posts Rules
+    match /forumPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        isSuperAdmin() ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+      );
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isSuperAdmin());
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow write: if request.auth.uid == userId || isSuperAdmin();
+      
+      match /{allSubcollections=**} {
+        allow read, write: if request.auth.uid == userId || isSuperAdmin();
+      }
+    }
+
+    match /users_lookup/{email} {
+      allow get: if true;
+      allow write: if true;
+    }
+
+    // Shared Bible Content
+    match /bibleSegments/{segmentId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Invitation Codes
+    match /invitationCodes/{codeId} {
+      allow read: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['timesUsed', 'updatedAt']))
+      );
+      allow create, delete: if isSuperAdmin();
+    }
+
+    // Feedback Board
+    match /feedback/{feedbackId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSuperAdmin();
+
+      match /replies/{replyId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if request.auth.uid == resource.data.userId || isSuperAdmin();
+      }
+    }
+  }
+}
