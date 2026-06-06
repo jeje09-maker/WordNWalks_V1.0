@@ -48,6 +48,7 @@ export default function HomePage() {
     title, 
     description, 
     detail, 
+    imageUrl,
     index, 
     badge 
   }: { 
@@ -55,11 +56,10 @@ export default function HomePage() {
     title: string, 
     description: string, 
     detail: string, 
+    imageUrl: string,
     index: number, 
     badge?: string 
   }) => {
-    const imageData = placeholderImages[index] || { imageUrl: `https://picsum.photos/seed/${index}/800/800`, imageHint: 'spiritual road' };
-    
     return (
         <section className={cn(
             "py-24 px-6 md:px-12 flex flex-col items-center",
@@ -89,10 +89,9 @@ export default function HomePage() {
                     index % 2 !== 0 && "md:order-1"
                 )}>
                     <img 
-                        src={imageData.imageUrl} 
+                        src={imageUrl} 
                         alt={title}
                         className="object-cover w-full h-full opacity-90 mix-blend-multiply"
-                        data-ai-hint={imageData.imageHint}
                     />
                     <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent pointer-events-none" />
                 </div>
@@ -185,16 +184,14 @@ export default function HomePage() {
       </section>
 
       {/* Feature Sections */}
-      <FeatureSection index={0} icon={BookOpen} title={t('landing_feature_1_title')} description={t('landing_feature_1_desc')} detail={t('landing_feature_1_detail')} />
-      <FeatureSection index={1} icon={FilePenLine} title={t('landing_feature_life_title')} description={t('landing_feature_life_desc')} detail={t('landing_feature_life_detail')} />
-      <FeatureSection index={2} icon={GraduationCap} title={t('landing_feature_retired_title')} description={t('landing_feature_retired_desc')} detail={t('landing_feature_retired_detail')} badge="VERIFIED" />
-      <FeatureSection index={3} icon={ShieldCheck} title={t('landing_feature_2_title')} description={t('landing_feature_2_desc')} detail={t('landing_feature_2_detail')} badge="INFRASTRUCTURE" />
-      <FeatureSection index={4} icon={Users} title={t('landing_feature_3_title')} description={t('landing_feature_3_desc')} detail={t('landing_feature_3_detail')} badge="NETWORK" />
-      <FeatureSection index={5} icon={Hand} title={t('landing_feature_4_title')} description={t('landing_feature_4_desc')} detail={t('landing_feature_4_detail')} badge="HISTORY" />
-      <FeatureSection index={6} icon={CalendarDays} title={t('landing_feature_5_title')} description={t('landing_feature_5_desc')} detail={t('landing_feature_5_detail')} />
-      <FeatureSection index={7} icon={FilePenLine} title={t('landing_feature_6_title')} description={t('landing_feature_6_desc')} detail={t('landing_feature_6_detail')} badge="INSIGHT" />
-      <FeatureSection index={8} icon={Waves} title={t('landing_feature_7_title')} description={t('landing_feature_7_desc')} detail={t('landing_feature_7_detail')} />
-      <FeatureSection index={9} icon={Globe} title={t('landing_feature_8_title')} description={t('landing_feature_8_desc')} detail={t('landing_feature_8_detail')} />
+      <FeatureSection index={0} icon={BookOpen} title={t('landing_feature_1_title')} description={t('landing_feature_1_desc')} detail={t('landing_feature_1_detail')} imageUrl="/landing/bible_reading.png" />
+      <FeatureSection index={1} icon={CalendarDays} title={t('landing_feature_life_title')} description={t('landing_feature_life_desc')} detail={t('landing_feature_life_detail')} imageUrl="/landing/calendar.png" />
+      <FeatureSection index={2} icon={GraduationCap} title={t('landing_feature_retired_title')} description={t('landing_feature_retired_desc')} detail={t('landing_feature_retired_detail')} imageUrl="/landing/scholar.png" badge="VERIFIED" />
+      <FeatureSection index={3} icon={ShieldCheck} title={t('landing_feature_2_title')} description={t('landing_feature_2_desc')} detail={t('landing_feature_2_detail')} imageUrl="/landing/community.png" badge="COMMUNITY" />
+      <FeatureSection index={4} icon={Users} title={t('landing_feature_3_title')} description={t('landing_feature_3_desc')} detail={t('landing_feature_3_detail')} imageUrl="/landing/connection.png" badge="PEOPLE" />
+      <FeatureSection index={5} icon={Hand} title={t('landing_feature_4_title')} description={t('landing_feature_4_desc')} detail={t('landing_feature_4_detail')} imageUrl="/landing/prayer.png" badge="PRAYER" />
+      <FeatureSection index={6} icon={Database} title={t('landing_feature_5_title')} description={t('landing_feature_5_desc')} detail={t('landing_feature_5_detail')} imageUrl="/landing/steward.png" badge="STEWARDSHIP" />
+      <FeatureSection index={7} icon={Globe} title={t('landing_feature_8_title')} description={t('landing_feature_8_desc')} detail={t('landing_feature_8_detail')} imageUrl="/landing/forum.png" badge="GLOBAL" />
 
       {/* Philosophy & Pricing -> Simplified Beta Section */}
       <section className="bg-white py-32 px-6 md:px-12 relative overflow-hidden border-t">
