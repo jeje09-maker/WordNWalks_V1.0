@@ -134,7 +134,11 @@ const getInitialDay = (date: string): DayData => ({
 
 const VersesWithHighlighting = ({ verses, keyVerses }: { verses?: string; keyVerses?: string[] }) => {
     if (!verses) return null;
-    const keyVerseSet = new Set((keyVerses || []).map(v => v.trim()));
+    const cleanKeyVerses = (keyVerses || []).map(v => {
+        // Strip bracketed numbers like [1], punctuation, and normalize spaces
+        return v.replace(/\[\d+\]/g, '').replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s+/g, ' ').trim().toLowerCase();
+    }).filter(v => v.length > 0);
+
     const verseParts = verses.split(/(?=\[\d+\])/).filter(p => p.trim() !== '');
     return (
         <div className="font-serif text-xl leading-relaxed text-slate-800">
@@ -143,7 +147,12 @@ const VersesWithHighlighting = ({ verses, keyVerses }: { verses?: string; keyVer
                 if (!match) return <span key={`text-${i}`}>{part}</span>;
                 const number = match[1]; 
                 const text = match[2].trim(); 
-                const isKeyVerse = keyVerseSet.has(text);
+                
+                // Normalize current verse text
+                const cleanText = text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s+/g, ' ').trim().toLowerCase();
+                // Match if key verse is contained within the verse or vice versa
+                const isKeyVerse = cleanKeyVerses.some(kv => cleanText.includes(kv) || kv.includes(cleanText));
+
                 return (
                     <Fragment key={`verse-${number}-${i}`}>
                         <sup className="text-muted-foreground font-sans font-medium text-sm mr-1 -top-1 relative">{number}</sup>
