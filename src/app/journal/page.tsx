@@ -1165,9 +1165,17 @@ const JournalPage: React.FC = () => {
         </Card>
 
         {currentDay.qt?.myMeditation?.trim() && !currentDay.qt.evaluation && (
-            <div className="pt-4 h-auto">
-                <Button onClick={handleFinishMeditation} disabled={anyAiLoading} variant="outline" size="sm" className="w-full bg-orange-100/50 text-accent h-8 rounded-full font-semibold border-orange-200 hover:bg-accent hover:text-white transition-colors">
-                    {isEvaluating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : '📖'}
+            <div className="pt-6 h-auto">
+                <Button 
+                    onClick={handleFinishMeditation} 
+                    disabled={anyAiLoading} 
+                    className="w-full h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/10 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-2 border-none"
+                >
+                    {isEvaluating ? (
+                        <LoaderCircle className="h-5 w-5 animate-spin" />
+                    ) : (
+                        <Sparkles className="h-5 w-5 animate-pulse" />
+                    )}
                     {isEvaluating ? t('journal_analyzingMeditation') : t('journal_finishMeditation')}
                 </Button>
             </div>
