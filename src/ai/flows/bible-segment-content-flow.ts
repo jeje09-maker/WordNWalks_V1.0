@@ -43,8 +43,9 @@ const prompt = ai.definePrompt({
 The output must be a single JSON object that strictly adheres to the output schema.
 
 **Localization and Cultural Context Guidelines:**
-- Generate all content in **{{{language}}}**.
-- Use standard, widely-accepted translations.
+- ALL fields in the output JSON (title, verses, paragraphs.title, analysis, meditationGuide, questions, keyVerses) MUST be written entirely in the target language: {{{language}}}.
+- Do NOT output any English unless the target language {{{language}}} is English. Even if the input passage name (e.g., "Genesis 1:1") is in English, you must translate everything and fetch/render the scripture verses in {{{language}}}.
+- For the bible verses, use a standard translation in the target language. For example, if {{{language}}} is "Korean" or "한국어 (Korean)", you must use a standard Korean translation (개역개정 or 새번역) for the verses, title, analysis, guide, etc. If {{{language}}} is English, use NIV or ESV.
 - Scripture must remain the central authority.
 
 **Content Generation Instructions:**
