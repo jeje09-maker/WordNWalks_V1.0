@@ -63,8 +63,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import PrayerFeedbackDialog from './components/PrayerFeedbackDialog';
 import GratitudeFeedbackDialog from './components/GratitudeFeedbackDialog';
 import TimePicker from './components/TimePicker';
-import { transcribeAudioAction, evaluateMeditationAction, generateBibleSegmentContentAction, recommendPassageAction } from './actions';
-import { reflectOnDay as reflectOnDayFlow } from '@/ai/flows/daily-reflection-flow';
+import { transcribeAudioAction, evaluateMeditationAction, generateBibleSegmentContentAction, recommendPassageAction, getDailyReflectionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -351,6 +350,57 @@ const CommunityContent = ({ orgContent, orgEvents, orgName, onClose, t }: { orgC
     );
 };
 
+const PeoplePicker = ({ peoples, onSelect, t, onAddNewPerson, className }: {
+  peoples: Person[];
+  onSelect: (person: Person) => void;
+  t: (key: string) => string;
+  onAddNewPerson: () => void;
+  className?: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const filteredList = useMemo(() => peoples?.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase())) || [], [peoples, search]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className={cn("gap-1 text-accent hover:bg-accent hover:text-white transition-colors", className)}>
+                {t('journal_addPerson')}
+            </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0 overflow-hidden z-[110]" side="bottom" align="end">
+            <div className="flex items-center justify-between p-3 bg-primary text-white">
+                <h4 className="font-bold text-sm">{t('peoples_search')}</h4>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => setOpen(false)}>
+                    <X className="h-4 w-4" />
+                </Button>
+            </div>
+            <div className="p-4 space-y-4">
+                <Input placeholder={t('journal_searchPersonPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} className="placeholder:text-[13px] placeholder:text-muted-foreground/60" />
+                <ScrollArea className="h-48">
+                    <div className="grid grid-cols-4 gap-2">
+                        {filteredList.map((p: Person) => (
+                          <button key={p.id} onClick={() => {
+                            onSelect(p);
+                            setOpen(false);
+                          }} className="flex flex-col items-center text-xs p-1 hover:bg-accent/10 rounded-md transition-colors">
+                              <Avatar className="h-10 w-10">
+                                  <AvatarImage src={p.avatarUrl} />
+                                  <AvatarFallback><span>{p.name?.charAt(0) || 'U'}</span></AvatarFallback>
+                              </Avatar>
+                              <span className="mt-1 truncate w-full text-center">{p.name}</span>
+                          </button>
+                        ))}
+                        {filteredList.length === 0 && <p className="col-span-full text-center py-10 text-xs text-muted-foreground">등록된 사람이 없습니다.</p>}
+                    </div>
+                </ScrollArea>
+                <div className="pt-2 border-t"><Button variant="outline" size="sm" className="w-full gap-2 text-primary font-bold" onClick={onAddNewPerson}> <Plus className="h-4 w-4" /> {t('journal_addNewPerson')} </Button></div>
+            </div>
+        </PopoverContent>
+    </Popover>
+  );
+};
+
 const JournalPage: React.FC = () => {
   const { user, isUserLoading, profile } = useUser();
   const firestore = useFirestore();
@@ -415,15 +465,7 @@ const JournalPage: React.FC = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [prayerPeoplePopoverOpen, setPrayerPeoplePopoverOpen] = useState(false);
-  const [gratitudePeoplePopoverOpen, setGratitudePeoplePopoverOpen] = useState(false);
-  const [expenditurePeoplePopoverOpen, setExpenditurePeoplePopoverOpen] = useState(false);
-  const [peoplePopoverOpen, setPeoplePopoverOpen] = useState(false);
-  
-  const [peopleSearch, setPeopleSearch] = useState('');
-  const [prayerPeopleSearch, setPrayerPeopleSearch] = useState('');
-  const [gratitudePeopleSearch, setGratitudePeopleSearch] = useState('');
-  const [expenditurePeopleSearch, setExpenditurePeopleSearch] = useState('');
+  // People picker state is managed locally within PeoplePicker
 
   const isSuperAdmin = useMemo(() => 
     user?.email === 'darak303@naver.com' || 
@@ -470,10 +512,7 @@ const JournalPage: React.FC = () => {
     });
   }, [orgEventsRaw, currentDate]);
 
-  const filteredPeoples = useMemo(() => peoples?.filter(p => !peopleSearch || p.name.toLowerCase().includes(peopleSearch.toLowerCase())) || [], [peoples, peopleSearch]);
-  const filteredPrayerPeoples = useMemo(() => peoples?.filter(p => !prayerPeopleSearch || p.name.toLowerCase().includes(prayerPeopleSearch.toLowerCase())) || [], [peoples, prayerPeopleSearch]);
-  const filteredGratitudePeoples = useMemo(() => peoples?.filter(p => !gratitudePeopleSearch || p.name.toLowerCase().includes(gratitudePeopleSearch.toLowerCase())) || [], [peoples, gratitudePeopleSearch]);
-  const filteredExpenditurePeoples = useMemo(() => peoples?.filter(p => !expenditurePeopleSearch || p.name.toLowerCase().includes(expenditurePeopleSearch.toLowerCase())) || [], [peoples, expenditurePeopleSearch]);
+  // People picker filtered lists are managed locally within PeoplePicker
 
   const selectedPrayer = useMemo(() => {
     if (!selectedPrayerId) return null;
@@ -686,12 +725,13 @@ const JournalPage: React.FC = () => {
     setIsFinishingDay(true);
     const journalContent = `하루 요약: ${currentDay.diary.reflection.dailySummary}\n하나님 경험: ${currentDay.diary.reflection.godExperience}`;
     try {
-      const result = await reflectOnDayFlow({ journalContent });
+      const result = await getDailyReflectionAction({ journalContent });
+      if (result.error) throw new Error(result.error);
       if (result.reflectionMessage) {
         updateDayState(prev => ({ ...prev, diaryCompleted: true, diary: { ...prev.diary, reflection: { ...prev.diary.reflection, dailyAiReflection: result.reflectionMessage } } }));
         toast({ title: t('journal_dayFinished') });
       }
-    } catch (e: any) { toast({ variant: "destructive", title: "오류", description: "하루 마감 중 오류가 발생했습니다." }); } finally { setIsFinishingDay(false); }
+    } catch (e: any) { toast({ variant: "destructive", title: "오류", description: e.message || "하루 마감 중 오류가 발생했습니다." }); } finally { setIsFinishingDay(false); }
   };
 
   const handleFinishMeditation = async () => {
@@ -756,21 +796,21 @@ const JournalPage: React.FC = () => {
   };
 
   const addPrayerItem = () => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, prayers: [...(prev.diary.prayers || []), { id: Date.now().toString(), title: '', status: PrayerStatus.InProgress, feedbacks: [], createdAt: new Date() }] } }));
-  const handleAddPersonPrayer = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, prayers: [...(prev.diary.prayers || []), { id: Date.now().toString(), title: `${p.name}님을 위한 기도`, status: PrayerStatus.InProgress, feedbacks: [], createdAt: new Date(), personId: p.id }] } })); setPrayerPeoplePopoverOpen(false); };
+  const handleAddPersonPrayer = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, prayers: [...(prev.diary.prayers || []), { id: Date.now().toString(), title: `${p.name}님을 위한 기도`, status: PrayerStatus.InProgress, feedbacks: [], createdAt: new Date(), personId: p.id }] } })); };
   const updatePrayerItem = (id: string, updates: Partial<PrayerItem>) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, prayers: (prev.diary.prayers || []).map(p => p.id === id ? { ...p, ...updates } : p) } }));
   const removePrayerItem = (id: string) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, prayers: (prev.diary.prayers || []).filter(p => p.id !== id) } }));
   const addGratitudeItem = () => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, gratitudes: [...(prev.diary.gratitudes || []), { id: Date.now().toString(), title: '', feedbacks: [], createdAt: new Date() }] } }));
-  const handleAddPersonGratitude = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, gratitudes: [...(prev.diary.gratitudes || []), { id: Date.now().toString(), title: `${p.name}님을 향한 감사`, feedbacks: [], createdAt: new Date(), personId: p.id }] } })); setGratitudePeoplePopoverOpen(false); };
+  const handleAddPersonGratitude = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, gratitudes: [...(prev.diary.gratitudes || []), { id: Date.now().toString(), title: `${p.name}님을 향한 감사`, feedbacks: [], createdAt: new Date(), personId: p.id }] } })); };
   const updateGratitudeItem = (id: string, updates: Partial<GratitudeItem>) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, gratitudes: (prev.diary.gratitudes || []).map(g => g.id === id ? { ...g, ...updates } : g) } }));
   const removeGratitudeItem = (id: string) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, gratitudes: (prev.diary.gratitudes || []).filter(g => g.id !== id) } }));
   const addExpenditureItem = () => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, expenditures: [...(prev.diary.expenditures || []), { id: Date.now().toString(), title: '', amount: 0, createdAt: new Date() }] } }));
-  const handleAddPersonExpenditure = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, expenditures: [...(prev.diary.expenditures || []), { id: Date.now().toString(), title: `${p.name}님을 위한 지출`, amount: 0, createdAt: new Date(), personId: p.id }] } })); setExpenditurePeoplePopoverOpen(false); };
+  const handleAddPersonExpenditure = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, expenditures: [...(prev.diary.expenditures || []), { id: Date.now().toString(), title: `${p.name}님을 위한 지출`, amount: 0, createdAt: new Date(), personId: p.id }] } })); };
   const updateExpenditureItem = (id: string, updates: Partial<ExpenditureItem>) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, expenditures: (prev.diary.expenditures || []).map(e => e.id === id ? { ...e, ...updates } : e) } }));
   const removeExpenditureItem = (id: string) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, expenditures: (prev.diary.expenditures || []).filter(e => e.id !== id) } }));
   const addScheduleItem = () => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, todaysSchedule: sortScheduleItems([...(prev.diary.todaysSchedule || []), { id: Date.now().toString(), time: '오전 09:00', content: '' }]) } }));
   const updateScheduleItem = (id: string, updates: Partial<ScheduleItem>) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, todaysSchedule: sortScheduleItems((prev.diary.todaysSchedule || []).map(item => id === item.id ? { ...item, ...updates } : item)) } }));
   const removeScheduleItem = (id: string) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, todaysSchedule: (prev.diary.todaysSchedule || []).filter(item => id === item.id ? false : true) } }));
-  const handleAddInteraction = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, peopleInteractions: [...(prev.diary.peopleInteractions || []), { id: Date.now().toString(), personId: p.id, note: '' }] } })); setPeoplePopoverOpen(false); };
+  const handleAddInteraction = (p: Person) => { updateDayState(prev => ({ ...prev, diary: { ...prev.diary, peopleInteractions: [...(prev.diary.peopleInteractions || []), { id: Date.now().toString(), personId: p.id, note: '' }] } })); };
   const addInteractionEmpty = () => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, peopleInteractions: [...(prev.diary.peopleInteractions || []), { id: Date.now().toString(), personId: '', note: '' }] } }));
   const updateInteractionNote = (id: string, note: string) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, peopleInteractions: (prev.diary.peopleInteractions || []).map(i => i.id === id ? { ...i, note } : i) } }));
   const removeInteraction = (id: string) => updateDayState(prev => ({ ...prev, diary: { ...prev.diary, peopleInteractions: (prev.diary.peopleInteractions || []).filter(i => i.id !== id) } }));
@@ -794,12 +834,18 @@ const JournalPage: React.FC = () => {
             const base64Audio = reader.result as string;
             setIsTranscribing(true);
             try {
-              const storage = getStorage();
-              const audioFileName = `prayer_audio_${Date.now()}.wav`;
-              const storageRefPath = ref(storage, `users/${user!.uid}/journal/${dateString}/${audioFileName}`);
-              await uploadBytes(storageRefPath, audioBlob);
-              const downloadUrl = await getDownloadURL(storageRefPath);
-              updateReflection('gratitudeJournalAudioUrl', downloadUrl);
+              // Try uploading to Storage first, but isolate any errors so transcription doesn't fail
+              try {
+                const storage = getStorage();
+                const audioFileName = `prayer_audio_${Date.now()}.wav`;
+                const storageRefPath = ref(storage, `users/${user!.uid}/journal/${dateString}/${audioFileName}`);
+                await uploadBytes(storageRefPath, audioBlob);
+                const downloadUrl = await getDownloadURL(storageRefPath);
+                updateReflection('gratitudeJournalAudioUrl', downloadUrl);
+              } catch (storageErr) {
+                console.warn("Audio upload to Storage failed, proceeding with transcription only:", storageErr);
+              }
+
               const result = await transcribeAudioAction({ audioDataUri: base64Audio });
               if (result.transcript) {
                 const currentText = currentDay.diary.reflection?.gratitudeJournal || '';
@@ -819,6 +865,51 @@ const JournalPage: React.FC = () => {
     }
   };
 
+  const compressAndConvertToWebP = (file: File, maxWidth = 1200, quality = 0.75): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Canvas context is not available'));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Canvas to Blob conversion failed'));
+              }
+            },
+            'image/webp',
+            quality
+          );
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file || !user) return;
@@ -829,16 +920,38 @@ const JournalPage: React.FC = () => {
       }
       setIsUploadingPhoto(true);
       try {
+          // Attempt standard upload via Firebase Storage
+          const compressedBlob = await compressAndConvertToWebP(file, 1200, 0.75);
           const storage = getStorage();
-          const storageRefPath = ref(storage, `users/${user.uid}/journal/${dateString}/${Date.now()}_${file.name}`);
-          await uploadBytes(storageRefPath, file);
+          const fileNameWithoutExtension = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+          const storageRefPath = ref(storage, `users/${user.uid}/journal/${dateString}/${Date.now()}_${fileNameWithoutExtension}.webp`);
+          await uploadBytes(storageRefPath, compressedBlob, { contentType: 'image/webp' });
           const downloadUrl = await getDownloadURL(storageRefPath);
           const newPhoto: PhotoItem = { id: Date.now().toString(), url: downloadUrl, caption: '' };
           updateReflection('photos', [...currentPhotos, newPhoto]);
           toast({ title: '사진이 안전하게 보관되었습니다.' });
-      } catch (err) { 
-          console.error(err);
-          toast({ variant: 'destructive', title: '오류', description: '이미지 업로드에 실패했습니다.' }); 
+      } catch (err: any) { 
+          console.warn("Storage upload failed, attempting base64 fallback:", err);
+          try {
+              // Re-compress the image to a smaller size (800px / 60% quality WebP)
+              // to prevent exceeding the 1MB Firestore document size limit.
+              const smallBlob = await compressAndConvertToWebP(file, 800, 0.6);
+              const base64Url = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(smallBlob);
+              });
+              const newPhoto: PhotoItem = { id: Date.now().toString(), url: base64Url, caption: '' };
+              updateReflection('photos', [...currentPhotos, newPhoto]);
+              toast({ 
+                  title: '사진을 임시 보관했습니다.', 
+                  description: '스토리지 권한이 없어 데이터베이스에 직접 저장했습니다.' 
+              });
+          } catch (fallbackErr: any) {
+              console.error("Base64 fallback failed:", fallbackErr);
+              toast({ variant: 'destructive', title: '오류', description: err.message || '이미지 업로드에 실패했습니다.' }); 
+          }
       } finally {
           setIsUploadingPhoto(false);
       }
@@ -860,43 +973,7 @@ const JournalPage: React.FC = () => {
       setSelectedPhotoId(null);
   };
 
-  const PeoplePicker = ({ open, onOpenChange, search, setSearch, filteredList, onSelect }: any) => (
-    <Popover open={open} onOpenChange={onOpenChange}>
-        <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-1 text-accent hover:bg-accent hover:text-white transition-colors">
-                {t('journal_addPerson')}
-            </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 p-0 overflow-hidden z-[110]" side="bottom" align="end">
-            <div className="flex items-center justify-between p-3 bg-primary text-white">
-                <h4 className="font-bold text-sm">{t('peoples_search')}</h4>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => onOpenChange(false)}>
-                    <X className="h-4 w-4" />
-                </Button>
-            </div>
-            <div className="p-4 space-y-4">
-                <Input placeholder={t('journal_searchPersonPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} className="placeholder:text-[13px] placeholder:text-muted-foreground/60" />
-                <ScrollArea className="h-48">
-                    <div className="grid grid-cols-4 gap-2">
-                        {filteredList.map((p: Person) => (
-                            <button key={p.id} onClick={() => onSelect(p)} className="flex flex-col items-center text-xs p-1 hover:bg-accent/10 rounded-md transition-colors">
-                                <Avatar className="h-10 w-10">
-                                    <AvatarImage src={p.avatarUrl} />
-                                    <AvatarFallback><span>{p.name?.charAt(0) || 'U'}</span></AvatarFallback>
-                                </Avatar>
-                                <span className="mt-1 truncate w-full text-center">{p.name}</span>
-                            </button>
-                        ))}
-                        {filteredList.length === 0 && <p className="col-span-full text-center py-10 text-xs text-muted-foreground">등록된 사람이 없습니다.</p>}
-                    </div>
-                </ScrollArea>
-                <div className="pt-2 border-t"><Button variant="outline" size="sm" className="w-full gap-2 text-primary font-bold" onClick={() => router.push('/peoples')}> <Plus className="h-4 w-4" /> {t('journal_addNewPerson')} </Button></div>
-            </div>
-        </PopoverContent>
-    </Popover>
-  );
-
-  const qtSection = (
+  const renderQtSection = () => (
     <div className="p-5 md:p-7 pt-5 space-y-5 pb-28 h-auto">
         <Card className="h-auto border-orange-100">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -935,12 +1012,12 @@ const JournalPage: React.FC = () => {
             <Card className="h-auto border-orange-100">
                 <CardHeader className="pb-2"><h3 className="text-lg font-light text-accent">{t('journal_reflectionQuestions')}</h3></CardHeader>
                 <CardContent className="space-y-4 h-auto"> 
-                    {currentDay.qt.questions.slice(0, 1).map((q, i) => ( 
+                    {currentDay.qt.questions.map((q, i) => ( 
                         <div key={`question-${i}`} className="h-auto"> 
                             <p className="text-lg leading-relaxed text-slate-700 mb-2 whitespace-pre-wrap font-normal">{q}</p> 
                             <Textarea 
-                                value={currentDay.qt.questionAnswers?.[0] || ''} 
-                                onChange={(e) => updateQuestionAnswer(0, e.target.value)} 
+                                value={currentDay.qt.questionAnswers?.[i] || ''} 
+                                onChange={(e) => updateQuestionAnswer(i, e.target.value)} 
                                 onInput={handleTextareaInput}
                                 placeholder={t('journal_answerPlaceholder')} 
                                 className="w-full bg-white/40 placeholder:text-[13px] placeholder:text-muted-foreground/60 h-auto resize-none overflow-hidden" 
@@ -983,12 +1060,11 @@ const JournalPage: React.FC = () => {
                 <h3 className="text-lg font-light text-accent flex items-center gap-2"><Hand className="h-5 w-5" /> {t('journal_todaysPrayer')}</h3>
                 <div className="flex items-center gap-2">
                     <PeoplePicker 
-                        open={prayerPeoplePopoverOpen} 
-                        onOpenChange={setPrayerPeoplePopoverOpen} 
-                        search={prayerPeopleSearch} 
-                        setSearch={setPrayerPeopleSearch} 
-                        filteredList={filteredPrayerPeoples} 
+                        peoples={peoples || []} 
                         onSelect={handleAddPersonPrayer} 
+                        t={t}
+                        onAddNewPerson={() => router.push('/peoples')}
+                        className="text-accent hover:bg-accent hover:text-white"
                     />
                     <Button variant="ghost" size="sm" onClick={addPrayerItem} className="gap-1 text-accent hover:bg-accent hover:text-white transition-colors">{t('journal_addPrayer')}</Button>
                 </div>
@@ -1101,7 +1177,7 @@ const JournalPage: React.FC = () => {
     </div>
   );
 
-  const diarySection = (
+  const renderDiarySection = () => (
     <div className="p-5 md:p-7 pt-5 space-y-5 pb-28 h-auto">
         <Card className="h-auto border-indigo-100">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -1209,12 +1285,11 @@ const JournalPage: React.FC = () => {
                 <h3 className="text-lg font-light text-primary flex items-center gap-2"><Users className="h-5 w-5" /> {t('journal_timeWithPeople')}</h3>
                 <div className="flex items-center gap-2">
                     <PeoplePicker 
-                        open={peoplePopoverOpen} 
-                        onOpenChange={setPeoplePopoverOpen} 
-                        search={peopleSearch} 
-                        setSearch={setPeopleSearch} 
-                        filteredList={filteredPeoples} 
+                        peoples={peoples || []} 
                         onSelect={handleAddInteraction} 
+                        t={t}
+                        onAddNewPerson={() => router.push('/peoples')}
+                        className="text-primary hover:bg-primary hover:text-white"
                     />
                     <Button variant="ghost" size="sm" onClick={addInteractionEmpty} className="gap-1 text-primary hover:bg-primary hover:text-white transition-colors">{t('journal_addInteraction')}</Button>
                 </div>
@@ -1267,27 +1342,6 @@ const JournalPage: React.FC = () => {
                     placeholder={t('journal_hardestMomentPlaceholder')} 
                     className="min-h-[60px] bg-white/40 placeholder:text-[13px] placeholder:text-muted-foreground/60 h-auto resize-none overflow-hidden"
                 />
-                <Textarea 
-                    value={currentDay.diary.reflection?.obedienceRepentance || ''} 
-                    onChange={(e) => updateReflection('obedienceRepentance', e.target.value)} 
-                    onInput={handleTextareaInput}
-                    placeholder={t('journal_obedienceRepentancePlaceholder')} 
-                    className="min-h-[60px] bg-white/40 placeholder:text-[13px] placeholder:text-muted-foreground/60 h-auto resize-none overflow-hidden"
-                />
-            </CardContent>
-        </Card>
-        
-        <Card className="h-auto border-indigo-100">
-            <CardHeader className="pb-2"><h3 className="text-lg font-light text-primary">🧭 {t('journal_lifesDirection')}</h3></CardHeader>
-            <CardContent className="space-y-4 h-auto">
-                <p className="text-sm h-auto">{t('journal_missionAlignmentQuestion')}</p>
-                <div className="flex gap-4 h-auto">
-                    <Select value={currentDay.diary.reflection?.missionAlignmentChoice || ''} onValueChange={(val) => updateReflection('missionAlignmentChoice', val as any)}>
-                        <SelectTrigger className="w-[120px] h-10"><SelectValue placeholder={t('journal_missionAlignmentSelect')} /></SelectTrigger>
-                        <SelectContent><SelectItem value="yes">{t('journal_yes')}</SelectItem><SelectItem value="no">{t('journal_no')}</SelectItem><SelectItem value="unsure">{t('journal_notSure')}</SelectItem></SelectContent>
-                    </Select>
-                    <Input value={currentDay.diary.reflection?.missionAlignment || ''} onChange={(e) => updateReflection('missionAlignment', e.target.value)} placeholder={t('journal_missionAlignmentRecord')} className="flex-1 h-10 bg-white/60 placeholder:text-[13px] placeholder:text-muted-foreground/60" />
-                </div>
             </CardContent>
         </Card>
         
@@ -1296,12 +1350,11 @@ const JournalPage: React.FC = () => {
                 <h3 className="text-lg font-light text-primary flex items-center gap-2"><Coins className="h-5 w-5 text-amber-500" /> {t('journal_meaningfulExpenditure')}</h3>
                 <div className="flex items-center gap-2">
                     <PeoplePicker 
-                        open={expenditurePeoplePopoverOpen} 
-                        onOpenChange={setExpenditurePeoplePopoverOpen} 
-                        search={expenditurePeopleSearch} 
-                        setSearch={setExpenditurePeopleSearch} 
-                        filteredList={filteredExpenditurePeoples} 
+                        peoples={peoples || []} 
                         onSelect={handleAddPersonExpenditure} 
+                        t={t}
+                        onAddNewPerson={() => router.push('/peoples')}
+                        className="text-primary hover:bg-primary hover:text-white"
                     />
                     <Button variant="ghost" size="sm" onClick={addExpenditureItem} className="gap-1 text-primary hover:bg-primary hover:text-white transition-colors">{t('journal_addExpenditure')}</Button>
                 </div>
@@ -1332,12 +1385,11 @@ const JournalPage: React.FC = () => {
                 <h3 className="text-lg font-light text-primary flex items-center gap-2"><Heart className="h-5 w-5 text-red-500" /> {t('journal_todaysGratitude')}</h3>
                 <div className="flex items-center gap-2">
                     <PeoplePicker 
-                        open={gratitudePeoplePopoverOpen} 
-                        onOpenChange={setGratitudePeoplePopoverOpen} 
-                        search={gratitudePeopleSearch} 
-                        setSearch={setGratitudePeopleSearch} 
-                        filteredList={filteredGratitudePeoples} 
+                        peoples={peoples || []} 
                         onSelect={handleAddPersonGratitude} 
+                        t={t}
+                        onAddNewPerson={() => router.push('/peoples')}
+                        className="text-primary hover:bg-primary hover:text-white"
                     />
                     <Button variant="ghost" size="sm" onClick={addGratitudeItem} className="gap-1 text-primary hover:bg-primary hover:text-white transition-colors">{t('journal_addGratitude')}</Button>
                 </div>
@@ -1531,7 +1583,7 @@ const JournalPage: React.FC = () => {
                 </div>
                 <ScrollArea className="flex-1">
                     <div className="p-5 md:p-7 pt-5 space-y-5 pb-28">
-                        {qtSection}
+                        {renderQtSection()}
                     </div>
                 </ScrollArea>
             </div>
@@ -1549,7 +1601,7 @@ const JournalPage: React.FC = () => {
                 </div>
                 <ScrollArea className="flex-1">
                     <div className="p-5 md:p-7 pt-5 space-y-5 pb-28">
-                        {diarySection}
+                        {renderDiarySection()}
                     </div>
                 </ScrollArea>
             </div>
@@ -1571,7 +1623,7 @@ const JournalPage: React.FC = () => {
                 <div className="flex-1 overflow-hidden">
                     <ScrollArea className="h-full">
                         <TabsContent value="meditation" className="mt-0 focus-visible:ring-0">
-                            {qtSection}
+                            {renderQtSection()}
                         </TabsContent>
                         <TabsContent value="diary" className="mt-0 focus-visible:ring-0">
                             <div className="px-4 py-3 flex justify-end">
@@ -1580,7 +1632,7 @@ const JournalPage: React.FC = () => {
                                     소식 보기
                                 </Button>
                             </div>
-                            {diarySection}
+                            {renderDiarySection()}
                         </TabsContent>
                     </ScrollArea>
                 </div>

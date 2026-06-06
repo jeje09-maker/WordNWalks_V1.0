@@ -307,6 +307,27 @@ export default function ProfileSetupPage() {
                         {isSaving ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Save className="h-5 w-5 mr-2" />}
                         {t('profile_save_changes')}
                     </Button>
+
+                    {process.env.NODE_ENV === 'development' && (
+                        <div className="pt-4 border-t border-dashed">
+                            <Button 
+                                type="button"
+                                variant="outline" 
+                                className="w-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700 h-11" 
+                                onClick={async () => {
+                                    if (!userDocRef) return;
+                                    try {
+                                        await setDoc(userDocRef, { isAdmin: true, isGroupAdmin: true }, { merge: true });
+                                        toast({ title: "관리자 권한 부여 완료", description: "로컬 개발용 Super Admin 권한이 Firestore에 등록되었습니다. 새로고침 후 대시보드를 확인하세요." });
+                                    } catch (e: any) {
+                                        toast({ title: "권한 획득 실패", description: e.message || "오류가 발생했습니다.", variant: "destructive" });
+                                    }
+                                }}
+                            >
+                                ⚡ [개발용] 관리자 권한 획득 (Set Admin: true)
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
             

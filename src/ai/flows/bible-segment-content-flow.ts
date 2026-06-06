@@ -23,7 +23,7 @@ const BibleSegmentContentOutputSchema = z.object({
     })).describe('An array of objects dividing the passage into logical paragraphs with titles.'),
     analysis: z.string().describe('A detailed commentary or analysis of the entire passage in the specified language.'),
     meditationGuide: z.string().describe('A guide to help someone meditate on the passage in the specified language.'),
-    questions: z.array(z.string()).length(1).describe('Exactly one core thought-provoking question for personal reflection based on the passage in the specified language.'),
+    questions: z.array(z.string()).length(2).describe('Exactly two reflection questions: the first for shaping thoughts/understanding, and the second for prompting action/application in the specified language.'),
 });
 export type BibleSegmentContentOutput = z.infer<typeof BibleSegmentContentOutputSchema>;
 
@@ -54,7 +54,7 @@ The output must be a single JSON object that strictly adheres to the output sche
 4.  **paragraphs**: Divide logically with ranges and titles.
 5.  **analysis**: Detailed commentary.
 6.  **meditationGuide**: Focus on application. Sentence form only.
-7.  **questions**: Create EXACTLY ONE core thought-provoking question. This should be the most essential and life-shaping question.`,
+7.  **questions**: Create EXACTLY TWO reflection questions: the first question must focus on shaping and organizing thoughts (contemplative/understanding), and the second question must focus on prompting concrete actions and applications in daily life.`,
 });
 
 const bibleSegmentContentFlow = ai.defineFlow(

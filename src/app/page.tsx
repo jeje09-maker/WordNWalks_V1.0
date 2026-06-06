@@ -126,7 +126,15 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-40 pb-20 px-6 text-center flex flex-col items-center">
+      <section className="relative z-0 pt-40 pb-20 px-6 text-center flex flex-col items-center">
+        <div 
+          className="absolute inset-0 -z-20 bg-cover bg-center bg-no-repeat opacity-30 pointer-events-none"
+          style={{ 
+            backgroundImage: "url('/ancient-bible.png')",
+            maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 70%)',
+            WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 70%)'
+          }}
+        />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-primary/20 rounded-full blur-[120px] -z-10" />
         
         <div className="inline-block px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-primary text-xs font-black tracking-[0.2em] mb-8 animate-pulse">
