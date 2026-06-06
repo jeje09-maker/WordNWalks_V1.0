@@ -614,7 +614,21 @@ const JournalPage: React.FC = () => {
                     lastAutoOpenedKey.current = currentKey; 
                 }
             } else {
-                finalQt = { ...finalQt, passage: decodedPassage, segmentId: segmentIdFromURL || '', completed: false };
+                finalQt = { 
+                    ...finalQt, 
+                    passage: decodedPassage, 
+                    segmentId: segmentIdFromURL || '', 
+                    title: '',
+                    analyzedPassage: '',
+                    meditationGuide: '',
+                    verses: '',
+                    analysis: '',
+                    paragraphs: [],
+                    questions: [],
+                    keyVerses: [],
+                    evaluation: '',
+                    missionTasks: []
+                };
                 lastAutoOpenedKey.current = currentKey; 
             }
         } else if (!dayData && !orgDailyContent?.passage) {
@@ -624,7 +638,7 @@ const JournalPage: React.FC = () => {
         }
 
         if (!isSyncing.current) { 
-            setCurrentDay({ ...initialData, qt: finalQt }); 
+            setCurrentDay({ ...initialData, qt: finalQt, completed: initialData.qt.passage === finalQt.passage ? initialData.completed : false }); 
         }
     };
     checkAndAutoOpen();

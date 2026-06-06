@@ -14,7 +14,7 @@ import {
     ArrowLeft, BookOpen, CalendarCheck, Lightbulb, Users, ChevronRight, 
     Bookmark, Library, Plus, Sailboat, Scale, Bird, Wind, Anchor, 
     Mountain, Heart, Shield, Sun, Moon, Search, CheckCircle2, Sparkles,
-    ShieldCheck, Building, Droplets, Target
+    ShieldCheck, Building, Droplets, Target, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BIBLE_SEGMENTS_OT, BIBLE_SEGMENTS_NT, BIBLE_BOOK_KEYS } from '@/lib/bible-segments';
@@ -107,6 +107,118 @@ const newTestamentBooks = [
     { key: 'revelation', name: '요한계시록', icon: <IconWrapper><Sun /></IconWrapper> },
 ];
 
+const SUFFERING_THEME = {
+  id: 'suffering',
+  title: '고난을 견디는 믿음',
+  description: '환난과 시련 속에서 하나님을 신뢰하고 소망을 품게 하는 50일간의 말씀 여정',
+  subThemes: [
+    {
+      id: 1,
+      title: '1. 환난 가운데 하나님을 신뢰하라',
+      passages: [
+        { id: 'theme_suffering_1', passage: '시편 46:1-11', description: '환난 중에 만날 큰 도움이 되시는 하나님.' },
+        { id: 'theme_suffering_2', passage: '이사야 41:8-13', description: '두려워하지 말라 내가 너를 붙들리라.' },
+        { id: 'theme_suffering_3', passage: '이사야 43:1-7', description: '물과 불 가운데서도 함께하시는 하나님.' },
+        { id: 'theme_suffering_4', passage: '신명기 31:6-8', description: '너를 버리지 아니하시고 떠나지 아니하신다.' },
+        { id: 'theme_suffering_5', passage: '여호수아 1:1-9', description: '강하고 담대하라.' }
+      ]
+    },
+    {
+      id: 2,
+      title: '2. 낙심과 절망을 이길 때',
+      passages: [
+        { id: 'theme_suffering_6', passage: '시편 42:5-11', description: '낙심하는 영혼에게 스스로 복음을 전하라.' },
+        { id: 'theme_suffering_7', passage: '시편 34:15-22', description: '상한 마음을 가까이하시는 하나님.' },
+        { id: 'theme_suffering_8', passage: '예레미야애가 3:19-33', description: '고난 중에도 끊어지지 않는 주의 사랑.' },
+        { id: 'theme_suffering_9', passage: '시편 27:1-14', description: '기다리는 자에게 주시는 담대함.' },
+        { id: 'theme_suffering_10', passage: '이사야 40:27-31', description: '독수리처럼 새 힘을 얻는 자.' }
+      ]
+    },
+    {
+      id: 3,
+      title: '3. 죄와 실패로 인한 고통을 만날 때',
+      passages: [
+        { id: 'theme_suffering_11', passage: '시편 32:1-11', description: '죄를 자복하는 자의 복.' },
+        { id: 'theme_suffering_12', passage: '시편 51:1-12', description: '회개하는 다윗의 기도.' },
+        { id: 'theme_suffering_13', passage: '요한일서 1:5-10', description: '죄를 자백하면 깨끗하게 하신다.' },
+        { id: 'theme_suffering_14', passage: '이사야 55:6-13', description: '악인은 길을 버리고 여호와께 돌아오라.' },
+        { id: 'theme_suffering_15', passage: '미가 7:7-20', description: '넘어졌을지라도 다시 일어나는 믿음.' }
+      ]
+    },
+    {
+      id: 4,
+      title: '4. 시험과 유혹을 이길 때',
+      passages: [
+        { id: 'theme_suffering_16', passage: '야고보서 1:2-12', description: '시험을 기쁘게 여기라.' },
+        { id: 'theme_suffering_17', passage: '에베소서 6:10-18', description: '하나님의 전신갑주.' },
+        { id: 'theme_suffering_18', passage: '마태복음 4:1-11', description: '예수님의 광야 시험.' },
+        { id: 'theme_suffering_19', passage: '베드로전서 5:6-11', description: '마귀를 대적하라.' },
+        { id: 'theme_suffering_20', passage: '히브리서 2:14-18', description: '시험받는 자를 능히 도우시는 주님.' }
+      ]
+    },
+    {
+      id: 5,
+      title: '5. 고난의 의미를 깨닫게 하는 말씀',
+      passages: [
+        { id: 'theme_suffering_21', passage: '로마서 5:1-11', description: '환난은 인내를 이루고.' },
+        { id: 'theme_suffering_22', passage: '야고보서 1:2-18', description: '연단을 통해 성숙하게 하시는 하나님.' },
+        { id: 'theme_suffering_23', passage: '베드로전서 1:3-9', description: '불로 연단한 금보다 귀한 믿음.' },
+        { id: 'theme_suffering_24', passage: '히브리서 12:1-13', description: '징계와 연단의 유익.' },
+        { id: 'theme_suffering_25', passage: '고린도후서 4:7-18', description: '겉사람은 후패하나 속사람은 새로워진다.' }
+      ]
+    },
+    {
+      id: 6,
+      title: '6. 끝까지 견디게 하는 말씀',
+      passages: [
+        { id: 'theme_suffering_26', passage: '로마서 8:18-39', description: '고난보다 큰 하나님의 사랑.' },
+        { id: 'theme_suffering_27', passage: '히브리서 10:32-39', description: '뒤로 물러가지 말라.' },
+        { id: 'theme_suffering_28', passage: '히브리서 12:1-3', description: '인내로 경주를 완주하라.' },
+        { id: 'theme_suffering_29', passage: '갈라디아서 6:7-10', description: '때가 이르면 거두리라.' },
+        { id: 'theme_suffering_30', passage: '요한계시록 2:8-11', description: '죽도록 충성하라.' }
+      ]
+    },
+    {
+      id: 7,
+      title: '7. 염려와 두려움을 이길 때',
+      passages: [
+        { id: 'theme_suffering_31', passage: '마태복음 6:25-34', description: '무엇을 먹을까 염려하지 말라.' },
+        { id: 'theme_suffering_32', passage: '빌립보서 4:4-9', description: '아무 것도 염려하지 말고.' },
+        { id: 'theme_suffering_33', passage: '시편 121:1-8', description: '나의 도움은 여호와께로부터.' },
+        { id: 'theme_suffering_34', passage: '이사야 26:1-4', description: '심지가 견고한 자를 평강으로 지키신다.' },
+        { id: 'theme_suffering_35', passage: '시편 91:1-16', description: '전능자의 그늘 아래 거하는 자.' }
+      ]
+    },
+    {
+      id: 8,
+      title: '8. 소망으로 고난을 통과하라',
+      passages: [
+        { id: 'theme_suffering_36', passage: '요한복음 16:16-33', description: '세상에서는 환난을 당하나 담대하라.' },
+        { id: 'theme_suffering_37', passage: '베드로전서 5:6-10', description: '잠깐 고난 후에 온전하게 하신다.' },
+        { id: 'theme_suffering_38', passage: '로마서 15:4-13', description: '소망의 하나님이 주시는 위로.' },
+        { id: 'theme_suffering_39', passage: '요엘 2:21-27', description: '잃어버린 세월을 회복시키시는 하나님.' },
+        { id: 'theme_suffering_40', passage: '계시록 21:1-7', description: '다시는 눈물도 고통도 없다.' }
+      ]
+    },
+    {
+      id: 9,
+      title: '예비 본문 10선',
+      passages: [
+        { id: 'theme_suffering_41', passage: '시편 73:21-28', description: '하나님은 내 마음의 반석.' },
+        { id: 'theme_suffering_42', passage: '하박국 3:16-19', description: '비록 무화과나무가 무성하지 못할지라도.' },
+        { id: 'theme_suffering_43', passage: '이사야 30:15-21', description: '잠잠히 신뢰하라.' },
+        { id: 'theme_suffering_44', passage: '시편 62:1-12', description: '나의 구원은 하나님께만.' },
+        { id: 'theme_suffering_45', passage: '고린도전서 10:1-13', description: '감당할 시험만 허락하신다.' },
+        { id: 'theme_suffering_46', passage: '데살로니가전서 5:16-24', description: '항상 기뻐하고 쉬지 말고 기도하라.' },
+        { id: 'theme_suffering_47', passage: '시편 40:1-10', description: '웅덩이에서 건지시는 하나님.' },
+        { id: 'theme_suffering_48', passage: '마가복음 4:35-41', description: '풍랑 가운데 주무시는 예수님.' },
+        { id: 'theme_suffering_49', passage: '열왕기상 19:1-18', description: '로뎀나무 아래 엘리야.' },
+        { id: 'theme_suffering_50', passage: '창세기 50:15-21', description: '악을 선으로 바꾸시는 하나님.' }
+      ]
+    }
+  ]
+};
+
 const categories = [
     { id: 'book', name: '책별 말씀', icon: BookOpen },
     { id: 'season', name: '절기별 말씀', icon: CalendarCheck },
@@ -122,6 +234,8 @@ export default function SeriesPage() {
     const { lang } = useTranslation();
     const [activeCategory, setActiveCategory] = useState('book');
     const [selectedBook, setSelectedBook] = useState<string | null>(searchParams.get('book'));
+    const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
+    const [expandedSubTheme, setExpandedSubTheme] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     const segmentsQuery = useMemoFirebase(() => 
@@ -133,6 +247,57 @@ export default function SeriesPage() {
     const activeSegmentIds = useMemo(() => {
         return new Set(globalSegments?.map(s => s.id.replace(`${lang}_`, '')) || []);
     }, [globalSegments, lang]);
+
+    const searchPlaceholder = useMemo(() => {
+        switch (activeCategory) {
+            case 'book': return '성경 책 이름 검색...';
+            case 'theme': return '주제 또는 본문 검색...';
+            default: return '검색...';
+        }
+    }, [activeCategory]);
+
+    const themeProgress = useMemo(() => {
+        if (!globalSegments) return { completedCount: 0, total: 50, percent: 0 };
+        let completedCount = 0;
+        SUFFERING_THEME.subThemes.forEach(sub => {
+            sub.passages.forEach(p => {
+                if (activeSegmentIds.has(p.id)) {
+                    completedCount++;
+                }
+            });
+        });
+        return {
+            completedCount,
+            total: 50,
+            percent: Math.round((completedCount / 50) * 100)
+        };
+    }, [activeSegmentIds, globalSegments]);
+
+    const getSubThemeProgress = (subThemeId: number) => {
+        const sub = SUFFERING_THEME.subThemes.find(s => s.id === subThemeId);
+        if (!sub) return { completed: 0, total: 0, percent: 0 };
+        let completed = 0;
+        sub.passages.forEach(p => {
+            if (activeSegmentIds.has(p.id)) {
+                completed++;
+            }
+        });
+        return {
+            completed,
+            total: sub.passages.length,
+            percent: Math.round((completed / sub.passages.length) * 100)
+        };
+    };
+
+    const handleSelectThemeSegment = (passage: string, segmentId: string) => {
+      const params = new URLSearchParams();
+      if (date) {
+        params.append('date', date);
+      }
+      params.append('passage', passage);
+      params.append('segmentId', segmentId);
+      router.push(`/journal?${params.toString()}`);
+    };
 
     const handleSelectSegment = (segment: BibleSegment) => {
       const bookName = BIBLE_BOOK_KEYS[selectedBook!];
@@ -219,9 +384,200 @@ export default function SeriesPage() {
         );
     };
 
+    const renderThemeList = () => {
+        const filteredThemes = [SUFFERING_THEME].filter(theme => 
+            theme.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            theme.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        if (filteredThemes.length === 0 && searchTerm) {
+            return <p className="text-muted-foreground text-center col-span-full py-10">검색 결과가 없습니다.</p>;
+        }
+
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredThemes.map((theme) => (
+                    <Card 
+                        key={theme.id} 
+                        className="flex flex-col p-6 transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer bg-card border border-muted"
+                        onClick={() => setSelectedTheme(theme.id)}
+                    >
+                        <div className="flex items-start gap-4 mb-4">
+                            <div className="p-3 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                                <ShieldCheck className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-foreground mb-1">{theme.title}</h3>
+                                <p className="text-sm text-muted-foreground line-clamp-2">{theme.description}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-auto pt-4 border-t border-muted/50">
+                            <div className="flex justify-between items-center text-xs mb-2">
+                                <span className="text-muted-foreground font-medium">전체 진행도</span>
+                                <span className="font-semibold text-foreground">{themeProgress.completedCount} / {themeProgress.total} 완료 ({themeProgress.percent}%)</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                <div 
+                                    className="bg-orange-500 h-2 rounded-full transition-all duration-500" 
+                                    style={{ width: `${themeProgress.percent}%` }}
+                                />
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+        );
+    };
+
+    const renderThemeDetail = () => {
+        if (selectedTheme !== 'suffering') return null;
+
+        return (
+            <div>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+                    <div className="flex items-center">
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedTheme(null)} className="mr-4">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 text-xs">주제별 시리즈</Badge>
+                                <span className="text-xs text-muted-foreground">50일 코스</span>
+                            </div>
+                            <h2 className="text-2xl font-bold text-foreground">{SUFFERING_THEME.title}</h2>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col justify-end min-w-[200px]">
+                        <div className="flex justify-between text-xs font-semibold mb-1">
+                            <span className="text-muted-foreground">시리즈 완료도</span>
+                            <span className="text-foreground">{themeProgress.completedCount} / {themeProgress.total} ({themeProgress.percent}%)</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                            <div 
+                                className="bg-orange-500 h-2 rounded-full transition-all duration-500" 
+                                style={{ width: `${themeProgress.percent}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <p className="text-muted-foreground mb-8 text-sm md:text-base bg-muted/30 p-4 rounded-xl border border-muted/50">
+                    {SUFFERING_THEME.description}
+                </p>
+
+                <div className="space-y-4">
+                    {SUFFERING_THEME.subThemes.map((sub, idx) => {
+                        const isExpanded = expandedSubTheme === sub.id;
+                        const subProgress = getSubThemeProgress(sub.id);
+                        
+                        const filteredPassages = sub.passages.filter(p => 
+                            !searchTerm || 
+                            p.passage.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            p.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            sub.title.toLowerCase().includes(searchTerm.toLowerCase())
+                        );
+
+                        if (filteredPassages.length === 0) return null;
+
+                        const isAutoExpanded = isExpanded || (searchTerm ? true : false);
+
+                        return (
+                            <Card key={sub.id} className="border border-muted overflow-hidden">
+                                <div 
+                                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors"
+                                    onClick={() => setExpandedSubTheme(isExpanded ? null : sub.id)}
+                                >
+                                    <div className="flex-1 pr-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                            <span className="font-semibold text-base text-foreground">{sub.title}</span>
+                                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full whitespace-nowrap">
+                                                진행률 {subProgress.completed} / {subProgress.total}
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                            <div 
+                                                className="bg-orange-500 h-1.5 rounded-full transition-all duration-500" 
+                                                style={{ width: `${subProgress.percent}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="text-muted-foreground ml-2">
+                                        {isAutoExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                                    </div>
+                                </div>
+
+                                {isAutoExpanded && (
+                                    <div className="p-4 pt-0 border-t border-muted bg-muted/10 space-y-2">
+                                        {filteredPassages.map((p) => {
+                                            const isMeditated = activeSegmentIds.has(p.id);
+                                            const originalPIdx = sub.passages.findIndex(origP => origP.id === p.id);
+                                            const seqNum = idx < 8 ? (idx * 5) + originalPIdx + 1 : 40 + originalPIdx + 1;
+                                            const displaySeqNum = seqNum < 10 ? `0${seqNum}` : `${seqNum}`;
+                                            
+                                            return (
+                                                <div 
+                                                    key={p.id} 
+                                                    className={cn(
+                                                        "p-3 rounded-lg border flex items-center justify-between hover:bg-muted/50 cursor-pointer transition-all",
+                                                        isMeditated ? "border-orange-500/30 bg-orange-500/5" : "border-muted bg-card"
+                                                    )}
+                                                    onClick={() => handleSelectThemeSegment(p.passage, p.id)}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={cn(
+                                                            "text-xs font-mono font-bold px-2 py-1 rounded",
+                                                            isMeditated ? "bg-orange-500/20 text-orange-600 dark:text-orange-400" : "bg-muted text-muted-foreground"
+                                                        )}>
+                                                            {displaySeqNum}
+                                                        </span>
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-semibold text-foreground text-sm sm:text-base">{p.passage}</p>
+                                                                {isMeditated && (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <CheckCircle2 className="h-4 w-4 text-orange-500" />
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>이미 생성된 묵상 자료가 있습니다.</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {isMeditated && (
+                                                            <Badge variant="outline" className="text-[10px] bg-orange-500/10 text-orange-600 border-orange-500/20 whitespace-nowrap">
+                                                                공유됨
+                                                            </Badge>
+                                                        )}
+                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </Card>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     const renderContent = () => {
         if (selectedBook) {
             return renderSegmentList();
+        }
+        if (activeCategory === 'theme' && selectedTheme) {
+            return renderThemeDetail();
         }
 
         switch (activeCategory) {
@@ -255,8 +611,9 @@ export default function SeriesPage() {
                         </div>
                     </div>
                 );
-            case 'season':
             case 'theme':
+                return renderThemeList();
+            case 'season':
                 return (
                     <Card className="flex items-center justify-center h-96">
                         <div className="text-center">
@@ -292,6 +649,8 @@ export default function SeriesPage() {
                             )}
                             onClick={() => {
                                 setSelectedBook(null);
+                                setSelectedTheme(null);
+                                setExpandedSubTheme(null);
                                 setActiveCategory(cat.id);
                             }}
                         >
@@ -312,7 +671,7 @@ export default function SeriesPage() {
                     <div className="relative mb-6">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input 
-                            placeholder="성경 책 이름 검색..." 
+                            placeholder={searchPlaceholder} 
                             className="pl-10 h-12 bg-white"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
