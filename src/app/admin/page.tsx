@@ -1,19 +1,21 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, limit, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, doc, limit, serverTimestamp, orderBy, collectionGroup, getDocs } from 'firebase/firestore';
 import type { UserProfile, Organization, InvitationCode, UserMembership } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { 
     Search, ShieldCheck, Users, Building2, Ticket, 
-    RefreshCw, UserPlus, Plus, Hash, Globe, Crown
+    RefreshCw, UserPlus, Plus, Hash, Globe, Crown,
+    Mail, BarChart3, ArrowUpDown
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
@@ -42,7 +44,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 const formatUserCreatedAt = (createdAt: any) => {
   if (!createdAt) return '-';
@@ -64,6 +66,48 @@ export default function SuperAdminPage() {
   const [userSearch, setUserSearch] = useState('');
   const [orgSearch, setOrgSearch] = useState('');
   const [codeSearch, setCodeSearch] = useState('');
+
+  // Stats & Leaderboard states
+  const [journals, setJournals] = useState<any[]>([]);
+  const [isJournalsLoading, setIsJournalsLoading] = useState(true);
+  const [sortField, setSortField] = useState<string>('lastActive');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [inactivePeriod, setInactivePeriod] = useState<'7days' | '30days'>('7days');
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('[Word N Walks] 소식 전해드립니다');
+  const [emailBody, setEmailBody] = useState(
+    '안녕하세요, 말씀과 동행하는 Word N Walks입니다.\n\n최근 묵상과 동행 기록이 뜸하셨는데, 다시 한 번 말씀과 함께 걷는 은혜를 누려보시는 것은 어떨까요?\n\n오늘도 말씀으로 승리하시길 기도합니다!'
+  );
+  const [emailRecipients, setEmailRecipients] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!firestore || !isSuperAdmin) return;
+    const fetchAllJournals = async () => {
+        setIsJournalsLoading(true);
+        try {
+            const q = collectionGroup(firestore, 'journal');
+            const snap = await getDocs(q);
+            const list: any[] = [];
+            snap.forEach(doc => {
+                const data = doc.data();
+                const userId = doc.ref.parent.parent?.id;
+                list.push({
+                    id: doc.id,
+                    userId,
+                    completed: !!data.completed,
+                    diaryCompleted: !!data.diaryCompleted,
+                    date: data.date || doc.id, // e.g. "2026-06-07"
+                });
+            });
+            setJournals(list);
+        } catch (e) {
+            console.error("Failed to fetch journals:", e);
+        } finally {
+            setIsJournalsLoading(false);
+        }
+    };
+    fetchAllJournals();
+  }, [firestore, isSuperAdmin]);
   
   const [isAddingMembership, setIsAddingMembership] = useState(false);
   const [targetUserForMembership, setTargetUserForMembership] = useState<UserProfile | null>(null);
@@ -257,10 +301,81 @@ export default function SuperAdminPage() {
     return <LoadingSpinner fullScreen />;
   }
 
-  const filteredUsers = (allUsers || []).filter(u => 
-    u.email?.toLowerCase().includes(userSearch.toLowerCase()) || 
-    u.displayName?.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const usersWithStats = useMemo(() => {
+    if (!allUsers) return [];
+    
+    const today = new Date();
+    const date7DaysAgoStr = format(subDays(today, 7), 'yyyy-MM-dd');
+    const date30DaysAgoStr = format(subDays(today, 30), 'yyyy-MM-dd');
+    const todayStr = format(today, 'yyyy-MM-dd');
+
+    return allUsers.map(u => {
+      const userJournals = journals.filter(j => j.userId === u.id);
+      
+      const qtCount = userJournals.filter(j => j.completed).length;
+      const diaryCount = userJournals.filter(j => j.diaryCompleted).length;
+      
+      const weekly = userJournals.filter(j => 
+        j.date >= date7DaysAgoStr && 
+        j.date <= todayStr && 
+        (j.completed || j.diaryCompleted)
+      ).length;
+
+      const monthly = userJournals.filter(j => 
+        j.date >= date30DaysAgoStr && 
+        j.date <= todayStr && 
+        (j.completed || j.diaryCompleted)
+      ).length;
+
+      const completedJournals = userJournals.filter(j => j.completed || j.diaryCompleted);
+      const lastActiveDate = completedJournals.length > 0 
+        ? completedJournals.reduce((max, curr) => curr.date > max ? curr.date : max, '') 
+        : '-';
+
+      return {
+        ...u,
+        qtCount,
+        diaryCount,
+        weekly,
+        monthly,
+        lastActiveDate
+      };
+    });
+  }, [allUsers, journals]);
+
+  const sortedAndFilteredUsers = useMemo(() => {
+    const searchFiltered = usersWithStats.filter(u => 
+      u.email?.toLowerCase().includes(userSearch.toLowerCase()) || 
+      u.displayName?.toLowerCase().includes(userSearch.toLowerCase())
+    );
+
+    return [...searchFiltered].sort((a: any, b: any) => {
+      let valA = a[sortField];
+      let valB = b[sortField];
+
+      // Handle custom comparisons for date strings
+      if (sortField === 'lastActiveDate') {
+        if (valA === '-') valA = '';
+        if (valB === '-') valB = '';
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [usersWithStats, userSearch, sortField, sortOrder]);
+
+  const inactiveUsers = useMemo(() => {
+    return usersWithStats.filter(u => {
+      if (inactivePeriod === '7days') {
+        return u.weekly === 0;
+      } else {
+        return u.monthly === 0;
+      }
+    });
+  }, [usersWithStats, inactivePeriod]);
+
+  const filteredUsers = sortedAndFilteredUsers;
 
   const filteredOrgs = (organizations || []).filter(o => 
     o.name.toLowerCase().includes(orgSearch.toLowerCase())
@@ -286,8 +401,9 @@ export default function SuperAdminPage() {
       <main className="flex-1 min-h-0 overflow-hidden p-8">
         <TooltipProvider>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                <TabsList className="grid grid-cols-3 w-full max-w-xl mb-8 bg-white shadow-sm border p-1 rounded-xl">
+                <TabsList className="grid grid-cols-4 w-full max-w-2xl mb-8 bg-white shadow-sm border p-1 rounded-xl">
                     <TabsTrigger value="users" className="rounded-lg"><Users className="mr-2 h-4 w-4"/>회원 및 권한</TabsTrigger>
+                    <TabsTrigger value="stats" className="rounded-lg"><BarChart3 className="mr-2 h-4 w-4"/>통계 및 활동현황</TabsTrigger>
                     <TabsTrigger value="orgs" className="rounded-lg"><Building2 className="mr-2 h-4 w-4"/>단체 관리</TabsTrigger>
                     <TabsTrigger value="codes" className="rounded-lg"><Ticket className="mr-2 h-4 w-4"/>초대 코드</TabsTrigger>
                 </TabsList>
@@ -381,6 +497,238 @@ export default function SuperAdminPage() {
                             </Card>
                         </TabsContent>
 
+                        <TabsContent value="stats" className="mt-0 space-y-6">
+                            {/* Summary Metrics Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <Card className="bg-white shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                                    <CardContent className="p-6 flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">전체 회원 수</p>
+                                            <h3 className="text-3xl font-black tracking-tight text-slate-800">{allUsers?.length || 0}명</h3>
+                                        </div>
+                                        <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                                            <Users className="h-6 w-6" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-white shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                                    <CardContent className="p-6 flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">총 묵상(QT) 수</p>
+                                            <h3 className="text-3xl font-black tracking-tight text-slate-800">
+                                                {journals.filter(j => j.completed).length}회
+                                            </h3>
+                                        </div>
+                                        <div className="h-12 w-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
+                                            <Crown className="h-6 w-6" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-white shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                                    <CardContent className="p-6 flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">주간 참여자 수</p>
+                                            <h3 className="text-3xl font-black tracking-tight text-slate-800">
+                                                {usersWithStats.filter(u => u.weekly > 0).length}명
+                                            </h3>
+                                        </div>
+                                        <div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600">
+                                            <BarChart3 className="h-6 w-6" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-white shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                                    <CardContent className="p-6 flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">월간 참여자 수</p>
+                                            <h3 className="text-3xl font-black tracking-tight text-slate-800">
+                                                {usersWithStats.filter(u => u.monthly > 0).length}명
+                                            </h3>
+                                        </div>
+                                        <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+                                            <Globe className="h-6 w-6" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+                                {/* Leaderboard / Activity table */}
+                                <Card className="bg-white shadow-sm border">
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <div>
+                                            <CardTitle>회원별 활동 분석 현황</CardTitle>
+                                            <CardDescription>전체 회원의 큐티/일기 작성 수 및 최근 참여 내역을 모니터링합니다. 각 열 머리글을 클릭해 정렬하세요.</CardDescription>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {isJournalsLoading ? (
+                                            <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground text-sm">
+                                                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                                                활동 내역 데이터를 불러오는 중...
+                                            </div>
+                                        ) : (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>사용자</TableHead>
+                                                        <TableHead>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSortField('qtCount');
+                                                                    setSortOrder(prev => sortField === 'qtCount' && prev === 'desc' ? 'asc' : 'desc');
+                                                                }}
+                                                                className="flex items-center gap-1 hover:text-slate-800 font-bold"
+                                                            >
+                                                                총 큐티 <ArrowUpDown className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSortField('diaryCount');
+                                                                    setSortOrder(prev => sortField === 'diaryCount' && prev === 'desc' ? 'asc' : 'desc');
+                                                                }}
+                                                                className="flex items-center gap-1 hover:text-slate-800 font-bold"
+                                                            >
+                                                                총 일기 <ArrowUpDown className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSortField('weekly');
+                                                                    setSortOrder(prev => sortField === 'weekly' && prev === 'desc' ? 'asc' : 'desc');
+                                                                }}
+                                                                className="flex items-center gap-1 hover:text-slate-800 font-bold"
+                                                            >
+                                                                최근 1주 <ArrowUpDown className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSortField('monthly');
+                                                                    setSortOrder(prev => sortField === 'monthly' && prev === 'desc' ? 'asc' : 'desc');
+                                                                }}
+                                                                className="flex items-center gap-1 hover:text-slate-800 font-bold"
+                                                            >
+                                                                최근 1달 <ArrowUpDown className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSortField('lastActiveDate');
+                                                                    setSortOrder(prev => sortField === 'lastActiveDate' && prev === 'desc' ? 'asc' : 'desc');
+                                                                }}
+                                                                className="flex items-center gap-1 hover:text-slate-800 font-bold"
+                                                            >
+                                                                최근 활동일 <ArrowUpDown className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {sortedAndFilteredUsers.map(u => (
+                                                        <TableRow key={u.id}>
+                                                            <TableCell className="flex items-center gap-3 py-3">
+                                                                <Avatar className="h-9 w-9">
+                                                                    <AvatarImage src={u.profilePictureUrl}/>
+                                                                    <AvatarFallback>{u.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div>
+                                                                    <p className="font-bold text-sm leading-none">{u.displayName}</p>
+                                                                    <p className="text-[10px] text-muted-foreground mt-1">{u.email}</p>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="font-semibold text-sm text-slate-700">{u.qtCount}회</TableCell>
+                                                            <TableCell className="font-semibold text-sm text-slate-700">{u.diaryCount}회</TableCell>
+                                                            <TableCell className="font-semibold text-sm text-slate-700">{u.weekly}회</TableCell>
+                                                            <TableCell className="font-semibold text-sm text-slate-700">{u.monthly}회</TableCell>
+                                                            <TableCell className="text-xs text-muted-foreground">{u.lastActiveDate}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Inactive Users & Group Email */}
+                                <Card className="bg-white shadow-sm border flex flex-col h-[600px]">
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-base flex items-center gap-2">
+                                                <Mail className="h-5 w-5 text-primary" />
+                                                최근 미참여자 관리
+                                            </CardTitle>
+                                            <div className="flex border rounded-lg overflow-hidden text-xs">
+                                                <button 
+                                                    onClick={() => setInactivePeriod('7days')}
+                                                    className={cn("px-2.5 py-1.5 font-medium transition-colors", inactivePeriod === '7days' ? "bg-primary text-white" : "bg-transparent text-slate-600 hover:bg-slate-50")}
+                                                >
+                                                    7일
+                                                </button>
+                                                <button 
+                                                    onClick={() => setInactivePeriod('30days')}
+                                                    className={cn("px-2.5 py-1.5 font-medium transition-colors", inactivePeriod === '30days' ? "bg-primary text-white" : "bg-transparent text-slate-600 hover:bg-slate-50")}
+                                                >
+                                                    30일
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <CardDescription className="text-xs">
+                                            지정한 기간 동안 한 번도 기록하지 않은 회원을 필터링하고 단체 메일을 보냅니다.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 min-h-0 flex flex-col justify-between pt-0 pb-4">
+                                        <div className="flex-1 overflow-y-auto pr-1 border rounded-lg p-2 bg-slate-50/50 space-y-2 max-h-[350px]">
+                                            {inactiveUsers.length === 0 ? (
+                                                <p className="text-xs text-muted-foreground italic text-center py-8">해당 기간의 미참여자가 없습니다.</p>
+                                            ) : (
+                                                inactiveUsers.map(u => (
+                                                    <div key={u.id} className="flex items-center justify-between p-2 bg-white rounded border border-slate-100 text-xs">
+                                                        <div className="flex items-center gap-2">
+                                                            <Avatar className="h-7 w-7">
+                                                                <AvatarImage src={u.profilePictureUrl}/>
+                                                                <AvatarFallback>{u.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div>
+                                                                <p className="font-bold">{u.displayName}</p>
+                                                                <p className="text-[9px] text-muted-foreground">{u.email}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-[9px] text-muted-foreground">마지막 활동</p>
+                                                            <p className="font-medium text-slate-600">{u.lastActiveDate}</p>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                        <div className="pt-4 shrink-0">
+                                            <Button 
+                                                className="w-full bg-slate-800 hover:bg-slate-900 text-white flex items-center justify-center gap-2"
+                                                disabled={inactiveUsers.length === 0}
+                                                onClick={() => {
+                                                    const emails = inactiveUsers.map(u => u.email).filter(e => !!e);
+                                                    setEmailRecipients(emails);
+                                                    setIsEmailModalOpen(true);
+                                                }}
+                                            >
+                                                <Mail className="h-4 w-4" />
+                                                미참여자 ({inactiveUsers.length}명) 단체 메일 쓰기
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </TabsContent>
+
                         <TabsContent value="orgs" className="mt-0 space-y-6">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">
@@ -469,6 +817,61 @@ export default function SuperAdminPage() {
                     </div>
                 </ScrollArea>
             </Tabs>
+
+            <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Mail className="h-5 w-5 text-primary" />
+                            미참여자 단체 메일 발송 (BCC)
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            수신자의 이메일 주소는 개인정보 보호를 위해 숨은참조(BCC)로 자동 지정됩니다.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4 text-sm">
+                        <div className="space-y-1">
+                            <Label className="text-xs font-semibold">수신자 ({emailRecipients.length}명)</Label>
+                            <div className="p-2 border rounded bg-slate-50 text-[10px] text-muted-foreground font-mono max-h-20 overflow-y-auto leading-relaxed">
+                                {emailRecipients.join(', ')}
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs font-semibold">메일 제목</Label>
+                            <Input 
+                                value={emailSubject} 
+                                onChange={e => setEmailSubject(e.target.value)} 
+                                placeholder="메일 제목을 입력하세요" 
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs font-semibold">메일 본문</Label>
+                            <Textarea 
+                                value={emailBody} 
+                                onChange={e => setEmailBody(e.target.value)} 
+                                placeholder="메일 내용을 작성하세요" 
+                                className="min-h-[150px] resize-none leading-relaxed"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEmailModalOpen(false)}>취소</Button>
+                        <Button 
+                            className="bg-primary text-white hover:bg-primary/90 flex items-center gap-2"
+                            onClick={() => {
+                                const bccList = emailRecipients.join(',');
+                                const mailto = `mailto:?bcc=${encodeURIComponent(bccList)}&subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+                                window.location.href = mailto;
+                                setIsEmailModalOpen(false);
+                                toast({ title: "메일 클라이언트를 실행했습니다." });
+                            }}
+                        >
+                            <Mail className="h-4 w-4" />
+                            메일 클라이언트 열기
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={isAddingMembership} onOpenChange={setIsAddingMembership}>
                 <DialogContent>
