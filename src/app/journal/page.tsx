@@ -743,6 +743,16 @@ const JournalPage: React.FC = () => {
     } catch (e: any) { toast({ variant: "destructive", title: "오류", description: e.message || "본문 내용을 생성하는 중 오류가 발생했습니다." }); } finally { setIsReadingBible(false); }
   };
 
+  const handleSaveMeditationOnly = () => {
+    updateDayState(prev => ({ ...prev, completed: true }));
+    toast({ title: "묵상이 저장 및 완료되었습니다." });
+  };
+
+  const handleSaveDayOnly = () => {
+    updateDayState(prev => ({ ...prev, diaryCompleted: true }));
+    toast({ title: "하루 기록이 저장 및 마감되었습니다." });
+  };
+
   const handleFinishDay = async () => {
     if(!currentDay.diary.reflection?.dailySummary?.trim()) return;
     setIsFinishingDay(true);
@@ -753,6 +763,7 @@ const JournalPage: React.FC = () => {
       if (result.reflectionMessage) {
         updateDayState(prev => ({ ...prev, diaryCompleted: true, diary: { ...prev.diary, reflection: { ...prev.diary.reflection, dailyAiReflection: result.reflectionMessage } } }));
         toast({ title: t('journal_dayFinished') });
+        router.push(`/stats?date=${dateString}`);
       }
     } catch (e: any) { toast({ variant: "destructive", title: "오류", description: e.message || "하루 마감 중 오류가 발생했습니다." }); } finally { setIsFinishingDay(false); }
   };
@@ -1165,18 +1176,36 @@ const JournalPage: React.FC = () => {
         </Card>
 
         {currentDay.qt?.myMeditation?.trim() && !currentDay.qt.evaluation && (
-            <div className="pt-6 h-auto">
+            <div className="pt-6 flex flex-col sm:flex-row gap-3 h-auto">
+                {currentDay.completed ? (
+                    <Button 
+                        disabled
+                        variant="secondary"
+                        className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 cursor-default flex items-center justify-center gap-2 rounded-xl"
+                    >
+                        <Check className="h-5 w-5 text-green-500" />
+                        묵상 완료 및 저장됨
+                    </Button>
+                ) : (
+                    <Button 
+                        onClick={handleSaveMeditationOnly} 
+                        className="flex-1 h-12 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                    >
+                        <Check className="h-5 w-5" />
+                        묵상마침 및 저장
+                    </Button>
+                )}
                 <Button 
                     onClick={handleFinishMeditation} 
                     disabled={anyAiLoading} 
-                    className="w-full h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/10 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-2 border-none"
+                    className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/10 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-2 border-none"
                 >
                     {isEvaluating ? (
                         <LoaderCircle className="h-5 w-5 animate-spin" />
                     ) : (
                         <Sparkles className="h-5 w-5 animate-pulse" />
                     )}
-                    {isEvaluating ? t('journal_analyzingMeditation') : t('journal_finishMeditation')}
+                    {isEvaluating ? t('journal_analyzingMeditation') : '오늘의 미션 보기'}
                 </Button>
             </div>
         )}
@@ -1490,10 +1519,36 @@ const JournalPage: React.FC = () => {
         </Card>
         
         {currentDay.diary.reflection?.dailySummary?.trim() && !currentDay.diary.reflection?.dailyAiReflection && (
-            <div className="pt-4 h-auto">
-                <Button onClick={handleFinishDay} disabled={anyAiLoading} variant="outline" size="sm" className="w-full bg-primary/10 text-primary h-12 rounded-full font-bold shadow-lg border-primary/20 hover:bg-primary/20">
-                    {isFinishingDay ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
-                    {t('journal_finishDay')}
+            <div className="pt-4 flex flex-col sm:flex-row gap-3 h-auto">
+                {currentDay.diaryCompleted ? (
+                    <Button 
+                        disabled
+                        variant="secondary"
+                        className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 cursor-default flex items-center justify-center gap-2 rounded-full"
+                    >
+                        <Check className="h-5 w-5 text-green-500" />
+                        하루 기록 마감 및 저장됨
+                    </Button>
+                ) : (
+                    <Button 
+                        onClick={handleSaveDayOnly} 
+                        className="flex-1 h-12 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-full transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                    >
+                        <Check className="h-5 w-5" />
+                        하루기록 마침 및 저장
+                    </Button>
+                )}
+                <Button 
+                    onClick={handleFinishDay} 
+                    disabled={anyAiLoading} 
+                    className="flex-1 bg-primary text-white h-12 rounded-full font-bold shadow-lg hover:bg-primary/95 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                >
+                    {isFinishingDay ? (
+                        <LoaderCircle className="h-5 w-5 animate-spin" />
+                    ) : (
+                        <Sparkles className="h-5 w-5" />
+                    )}
+                    {isFinishingDay ? '하루 마감 중...' : '마침 및 일일 리포트 보기'}
                 </Button>
             </div>
         )}

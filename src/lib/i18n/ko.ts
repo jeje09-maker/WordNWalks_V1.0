@@ -60,7 +60,7 @@ export const ko = {
     journal_missionFail: '실패',
     journal_noMission: '미션이 생성되지 않았습니다.',
     journal_todaysSchedule: '오늘의 일정',
-    journal_addSchedule: '일정 기록',
+    journal_addSchedule: '일정 추가',
     journal_schedulePlaceholder: '일정 내용을 입력하세요...',
     journal_addSchedulePrompt: "'+ 일정 추가' 버튼을 눌러 새 일정을 추가하세요.",
     journal_todaysLife: '오늘의 삶 돌아보기',

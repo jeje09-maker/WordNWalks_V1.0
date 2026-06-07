@@ -44,6 +44,17 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
+const formatUserCreatedAt = (createdAt: any) => {
+  if (!createdAt) return '-';
+  try {
+    const d = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+    if (isNaN(d.getTime())) return '-';
+    return format(d, 'yyyy-MM-dd HH:mm');
+  } catch (e) {
+    return '-';
+  }
+};
+
 export default function SuperAdminPage() {
   const { user, profile } = useUser();
   const firestore = useFirestore();
@@ -301,6 +312,7 @@ export default function SuperAdminPage() {
                                             <TableRow>
                                                 <TableHead>사용자</TableHead>
                                                 <TableHead>소속 및 권한</TableHead>
+                                                <TableHead>가입일</TableHead>
                                                 <TableHead>상태</TableHead>
                                                 <TableHead className="text-right">작업</TableHead>
                                             </TableRow>
@@ -339,6 +351,9 @@ export default function SuperAdminPage() {
                                                                 ))}
                                                                 {(!u.memberships || u.memberships.length === 0) && <span className="text-xs text-muted-foreground italic">소속 없음</span>}
                                                             </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                                            {formatUserCreatedAt(u.createdAt)}
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge variant={u.status === 'active' ? 'default' : 'destructive'}>{u.status}</Badge>
