@@ -62,6 +62,10 @@ export default function SuperAdminPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const ROOT_ADMIN_EMAIL = 'darak303@naver.com';
+  const ADMIN_UID = '4PYWOqRk1dXhVt5NXe5DZq7Fa4Q2';
+  const isSuperAdmin = user?.email === ROOT_ADMIN_EMAIL || user?.uid === ADMIN_UID || profile?.isAdmin;
+
   const [activeTab, setActiveTab] = useState('users');
   const [userSearch, setUserSearch] = useState('');
   const [orgSearch, setOrgSearch] = useState('');
@@ -118,10 +122,6 @@ export default function SuperAdminPage() {
 
   const [isCreatingCode, setIsCreatingCode] = useState(false);
   const [newCodeData, setNewCodeData] = useState({ organizationId: '', usageLimit: 0 });
-
-  const ROOT_ADMIN_EMAIL = 'darak303@naver.com';
-  const ADMIN_UID = '4PYWOqRk1dXhVt5NXe5DZq7Fa4Q2';
-  const isSuperAdmin = user?.email === ROOT_ADMIN_EMAIL || user?.uid === ADMIN_UID || profile?.isAdmin;
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !user || !isSuperAdmin) return null;
