@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -16,9 +15,6 @@ export default function TimePicker({
   onChange: (value: string) => void;
 }) {
   const { t } = useTranslation();
-  const [editingMode, setEditingMode] = useState<'hour' | 'minute' | null>(null);
-  const timePickerRef = useRef<HTMLDivElement>(null);
-  const touchStartY = useRef<number | null>(null);
 
   const [period, hour, minute] = useMemo(() => {
     try {
@@ -33,121 +29,56 @@ export default function TimePicker({
     }
   }, [value]);
 
-  const togglePeriod = () => {
-    setEditingMode(null); 
-    const newPeriod = period === '오전' ? '오후' : '오전';
-    onChange(`${newPeriod} ${hour}:${minute}`);
+  const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onChange(`${e.target.value} ${hour}:${minute}`);
   };
 
-  const handleUnitClick = (unit: 'hour' | 'minute') => {
-    setEditingMode(unit);
+  const handleHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onChange(`${period} ${e.target.value}:${minute}`);
   };
-  
-  const updateValue = useCallback((direction: number) => {
-    if (editingMode === 'hour') {
-      const currentIndex = hours.indexOf(hour);
-      if (currentIndex === -1) return;
-      const newIndex = (currentIndex + direction + hours.length) % hours.length;
-      const newHour = hours[newIndex];
-      onChange(`${period} ${newHour}:${minute}`);
-    } else if (editingMode === 'minute') {
-      const currentIndex = minutes.indexOf(minute);
-      if (currentIndex === -1) return;
-      const newIndex = (currentIndex + direction + minutes.length) % minutes.length;
-      const newMinute = minutes[newIndex];
-      onChange(`${period} ${hour}:${newMinute}`);
-    }
-  }, [editingMode, hour, minute, period, onChange]);
 
-  const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault();
-    const direction = e.deltaY > 0 ? 1 : -1;
-    updateValue(direction);
-  }, [updateValue]);
-
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  }, []);
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (touchStartY.current === null) return;
-    const touchCurrentY = e.touches[0].clientY;
-    const deltaY = touchStartY.current - touchCurrentY;
-
-    if (Math.abs(deltaY) > 10) { // Sensitivity
-      e.preventDefault();
-      const direction = deltaY > 0 ? 1 : -1;
-      updateValue(direction);
-      touchStartY.current = touchCurrentY;
-    }
-  }, [updateValue]);
-
-  const handleGlobalClick = useCallback((e: MouseEvent) => {
-    if (timePickerRef.current && !timePickerRef.current.contains(e.target as Node)) {
-        setEditingMode(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    const el = timePickerRef.current;
-    if (el) {
-      el.addEventListener('wheel', handleWheel, { passive: false });
-      el.addEventListener('touchstart', handleTouchStart, { passive: false });
-      el.addEventListener('touchmove', handleTouchMove, { passive: false });
-    }
-    document.addEventListener('mousedown', handleGlobalClick);
-    
-    return () => {
-      if (el) {
-        el.removeEventListener('wheel', handleWheel);
-        el.removeEventListener('touchstart', handleTouchStart);
-        el.removeEventListener('touchmove', handleTouchMove);
-      }
-      document.removeEventListener('mousedown', handleGlobalClick);
-    };
-  }, [handleWheel, handleGlobalClick, handleTouchStart, handleTouchMove]);
-
-  const getSpanClasses = (unit: 'hour' | 'minute') => {
-    const isActive = editingMode === unit;
-    return cn(
-      "cursor-pointer px-1 py-1 rounded-md font-mono text-base transition-colors select-none",
-      "hover:bg-muted",
-      isActive && "bg-primary/20 text-primary ring-2 ring-primary"
-    );
+  const handleMinuteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onChange(`${period} ${hour}:${e.target.value}`);
   };
 
   return (
-    <div 
-      ref={timePickerRef}
-      className="flex items-center justify-center gap-1 rounded-md border border-input bg-background px-2 py-2 text-sm h-10 w-full touch-none"
-    >
-      <button
-        type="button"
-        onClick={togglePeriod}
+    <div className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm text-sm h-10 w-full select-none">
+      {/* Period Selection (AM/PM) */}
+      <select
+        value={period}
+        onChange={handlePeriodChange}
         className={cn(
-          "cursor-pointer px-1 py-1 rounded-md transition-colors font-sans font-semibold text-sm select-none",
-          "hover:bg-muted",
+          "appearance-none bg-transparent cursor-pointer rounded-md px-1.5 py-0.5 font-sans font-bold text-sm transition-colors border-none outline-none focus:bg-slate-100 hover:bg-slate-50 text-center w-[54px]",
           period === '오전' ? 'text-blue-600' : 'text-red-600'
         )}
       >
-        {period === '오전' ? t('time_am') : t('time_pm')}
-      </button>
+        <option value="오전">{t('time_am')}</option>
+        <option value="오후">{t('time_pm')}</option>
+      </select>
       
-      <span
-        onClick={() => handleUnitClick('hour')}
-        className={getSpanClasses('hour')}
+      {/* Hour Selection */}
+      <select
+        value={hour}
+        onChange={handleHourChange}
+        className="appearance-none bg-transparent cursor-pointer rounded-md px-1 py-0.5 font-mono text-base font-semibold hover:bg-slate-50 transition-colors border-none outline-none focus:bg-slate-100 text-slate-800 text-center w-8"
       >
-        {hour}
-      </span>
+        {hours.map(h => (
+          <option key={h} value={h}>{h}</option>
+        ))}
+      </select>
 
-      <span className="font-mono">:</span>
+      <span className="font-mono text-slate-400 font-semibold select-none">:</span>
 
-      <span
-        onClick={() => handleUnitClick('minute')}
-        className={getSpanClasses('minute')}
+      {/* Minute Selection */}
+      <select
+        value={minute}
+        onChange={handleMinuteChange}
+        className="appearance-none bg-transparent cursor-pointer rounded-md px-1 py-0.5 font-mono text-base font-semibold hover:bg-slate-50 transition-colors border-none outline-none focus:bg-slate-100 text-slate-800 text-center w-8"
       >
-        {minute}
-      </span>
+        {minutes.map(m => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -164,6 +164,8 @@ export const ko = {
     peoples_illustration: '사진 선택',
     peoples_upload: '직접 업로드',
     peoples_camera: '카메라 촬영',
+    peoples_commentLabel: '메모',
+    peoples_commentPlaceholder: '이 분에 대해 기억하고 싶은 내용을 적어보세요...',
     peoples_favoriteLabel: '즐겨찾기 추가',
     stats_dailyReport: '일일 리포트',
     stats_weeklyReport: '주간 리포트',
