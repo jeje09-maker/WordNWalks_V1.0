@@ -120,5 +120,10 @@ service cloud.firestore {
         allow update, delete: if request.auth.uid == resource.data.userId || isSuperAdmin();
       }
     }
+
+    // Collection Group rules for journals (admin access)
+    match /{path=**}/journal/{journalId} {
+      allow read: if isSuperAdmin();
+    }
   }
 }

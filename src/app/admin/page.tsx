@@ -297,10 +297,6 @@ export default function SuperAdminPage() {
       setNewCodeData({ organizationId: '', usageLimit: 0 });
   };
 
-  if (isUsersLoading || isOrgsLoading || isCodesLoading) {
-    return <LoadingSpinner fullScreen />;
-  }
-
   const usersWithStats = useMemo(() => {
     if (!allUsers) return [];
     
@@ -384,6 +380,10 @@ export default function SuperAdminPage() {
   const filteredCodes = (invitationCodes || []).filter(c => 
     c.code.toLowerCase().includes(codeSearch.toLowerCase())
   );
+
+  if (isUsersLoading || isOrgsLoading || isCodesLoading) {
+    return <LoadingSpinner fullScreen />;
+  }
 
   return (
     <div className="h-full flex flex-col bg-muted/10">
